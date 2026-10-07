@@ -1,0 +1,1391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Morse Code Analyzer — Encode, Decode & Visualize</title>
+    <meta name="description" content="A premium Morse code translator, analyzer, and image processor. Encode text to Morse, decode Morse to text, analyze patterns, and extract Morse code from images.">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg-primary: #0a0e1a;
+            --bg-secondary: #111827;
+            --bg-card: rgba(17, 24, 39, 0.7);
+            --bg-card-hover: rgba(30, 41, 59, 0.8);
+            --border: rgba(99, 102, 241, 0.15);
+            --border-glow: rgba(99, 102, 241, 0.4);
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --accent-blue: #6366f1;
+            --accent-cyan: #22d3ee;
+            --accent-orange: #fb923c;
+            --accent-green: #34d399;
+            --accent-pink: #f472b6;
+            --accent-purple: #a78bfa;
+            --gradient-1: linear-gradient(135deg, #6366f1, #6648ac, #a78bfa);
+            --gradient-2: linear-gradient(135deg, #22d3ee, #6366f1);
+            --gradient-3: linear-gradient(135deg, #f472b6, #fb923c);
+            --shadow-lg: 0 20px 60px rgba(0,0,0,0.4);
+            --shadow-glow: 0 0 30px rgba(99, 102, 241, 0.15);
+            --radius: 16px;
+            --radius-sm: 10px;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Animated background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(ellipse at 20% 50%, rgba(99, 102, 241, 0.08) 0%, transparent 50%),
+                        radial-gradient(ellipse at 80% 20%, rgba(34, 211, 238, 0.06) 0%, transparent 50%),
+                        radial-gradient(ellipse at 50% 80%, rgba(244, 114, 182, 0.05) 0%, transparent 50%);
+            z-index: -1;
+            animation: bgShift 20s ease-in-out infinite alternate;
+        }
+
+        @keyframes bgShift {
+            0% { transform: translate(0, 0) rotate(0deg); }
+            100% { transform: translate(-5%, 3%) rotate(3deg); }
+        }
+
+        /* Header */
+        header {
+            text-align: center;
+            padding: 50px 20px 30px;
+            position: relative;
+        }
+
+        .logo-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            margin-bottom: 12px;
+        }
+
+        .logo-icon {
+            width: 56px;
+            height: 56px;
+            background: var(--gradient-1);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            box-shadow: 0 8px 30px rgba(99, 102, 241, 0.3);
+            animation: logoPulse 3s ease-in-out infinite;
+        }
+
+        @keyframes logoPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        h1 {
+            font-size: 2.8rem;
+            font-weight: 900;
+            background: var(--gradient-1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: -1px;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            font-weight: 400;
+            margin-top: 8px;
+        }
+
+        .morse-demo {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--accent-cyan);
+            font-size: 1rem;
+            margin-top: 12px;
+            letter-spacing: 4px;
+            opacity: 0.7;
+            animation: morseBlink 4s step-end infinite;
+        }
+
+        @keyframes morseBlink {
+            0%, 100% { opacity: 0.7; }
+            50% { opacity: 1; }
+        }
+
+        /* Navigation Tabs */
+        .tabs {
+            display: flex;
+            justify-content: center;
+            gap: 6px;
+            padding: 8px 12px;
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            margin: 0 auto 40px;
+            max-width: 800px;
+            width: fit-content;
+        }
+
+        .tab {
+            padding: 12px 24px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            border-radius: 14px;
+            transition: all 0.3s ease;
+            position: relative;
+            white-space: nowrap;
+        }
+
+        .tab:hover {
+            color: var(--text-primary);
+            background: rgba(99, 102, 241, 0.1);
+        }
+
+        .tab.active {
+            background: var(--gradient-1);
+            color: white;
+            font-weight: 600;
+            box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4);
+        }
+
+        .tab .tab-icon { margin-right: 6px; }
+
+        /* Main Content */
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 0 24px 60px;
+        }
+
+        .panel {
+            display: none;
+            animation: fadeSlideIn 0.4s ease;
+        }
+
+        .panel.active { display: block; }
+
+        @keyframes fadeSlideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Cards */
+        .card {
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 32px;
+            margin-bottom: 24px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--gradient-1);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .card:hover::before { opacity: 1; }
+        .card:hover { border-color: var(--border-glow); box-shadow: var(--shadow-glow); }
+
+        .card-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-title .icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        .icon-blue { background: rgba(99, 102, 241, 0.15); }
+        .icon-cyan { background: rgba(34, 211, 238, 0.15); }
+        .icon-orange { background: rgba(251, 146, 60, 0.15); }
+        .icon-green { background: rgba(52, 211, 153, 0.15); }
+        .icon-pink { background: rgba(244, 114, 182, 0.15); }
+
+        /* Form Elements */
+        textarea, input[type="text"] {
+            width: 100%;
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 16px 20px;
+            color: var(--text-primary);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1rem;
+            resize: vertical;
+            transition: all 0.3s;
+            outline: none;
+        }
+
+        textarea:focus, input[type="text"]:focus {
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+        }
+
+        textarea::placeholder, input::placeholder {
+            color: var(--text-muted);
+        }
+
+        label {
+            display: block;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+
+        .form-group { margin-bottom: 20px; }
+
+        /* Buttons */
+        .btn {
+            padding: 14px 32px;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-primary {
+            background: var(--gradient-1);
+            color: white;
+            box-shadow: 0 4px 20px rgba(99, 102, 241, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(99, 102, 241, 0.5);
+        }
+
+        .btn-primary:active { transform: translateY(0); }
+
+        .btn-secondary {
+            background: rgba(99, 102, 241, 0.1);
+            color: var(--accent-blue);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(99, 102, 241, 0.2);
+            transform: translateY(-1px);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        /* Result Box */
+        .result-box {
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 20px 24px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1rem;
+            min-height: 60px;
+            position: relative;
+            word-break: break-all;
+            line-height: 1.8;
+        }
+
+        .result-label {
+            position: absolute;
+            top: -10px;
+            left: 16px;
+            background: var(--bg-secondary);
+            padding: 0 10px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--accent-cyan);
+            font-family: 'Inter', sans-serif;
+        }
+
+        .morse-char {
+            display: inline-block;
+            padding: 2px 6px;
+            margin: 2px;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+
+        .morse-char:hover {
+            background: rgba(99, 102, 241, 0.2);
+        }
+
+        .morse-dot { color: var(--accent-cyan); }
+        .morse-dash { color: var(--accent-orange); }
+        .morse-space { color: var(--text-muted); margin: 0 6px; }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            margin-top: 20px;
+        }
+
+        .stat-card {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 20px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .stat-card:hover {
+            border-color: var(--border-glow);
+            transform: translateY(-3px);
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 800;
+            background: var(--gradient-2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 6px;
+        }
+
+        /* Frequency Chart */
+        .freq-chart {
+            display: flex;
+            align-items: flex-end;
+            gap: 4px;
+            height: 160px;
+            padding: 20px 0;
+            overflow-x: auto;
+        }
+
+        .freq-bar-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            min-width: 28px;
+        }
+
+        .freq-bar {
+            width: 24px;
+            border-radius: 6px 6px 2px 2px;
+            background: var(--gradient-2);
+            transition: all 0.5s ease;
+            position: relative;
+        }
+
+        .freq-bar:hover {
+            filter: brightness(1.3);
+            transform: scaleY(1.05);
+        }
+
+        .freq-label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .freq-count {
+            font-size: 0.65rem;
+            color: var(--accent-cyan);
+            font-weight: 600;
+        }
+
+        /* Reference Table */
+        .ref-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            font-size: 0.9rem;
+        }
+
+        .ref-table thead th {
+            background: rgba(99, 102, 241, 0.1);
+            color: var(--accent-blue);
+            font-weight: 600;
+            padding: 14px 16px;
+            text-align: left;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 1px;
+            position: sticky;
+            top: 0;
+        }
+
+        .ref-table thead th:first-child { border-radius: 10px 0 0 0; }
+        .ref-table thead th:last-child { border-radius: 0 10px 0 0; }
+
+        .ref-table td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+            transition: background 0.2s;
+        }
+
+        .ref-table tr:hover td {
+            background: rgba(99, 102, 241, 0.05);
+        }
+
+        .ref-table .char-cell {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: var(--accent-cyan);
+        }
+
+        .ref-table .morse-cell {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.1rem;
+            letter-spacing: 3px;
+        }
+
+        .table-wrapper {
+            max-height: 500px;
+            overflow-y: auto;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+        }
+
+        .table-wrapper::-webkit-scrollbar { width: 6px; }
+        .table-wrapper::-webkit-scrollbar-track { background: transparent; }
+        .table-wrapper::-webkit-scrollbar-thumb { background: var(--accent-blue); border-radius: 3px; }
+
+        /* Image Upload */
+        .upload-zone {
+            border: 2px dashed var(--border);
+            border-radius: var(--radius);
+            padding: 50px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .upload-zone:hover, .upload-zone.dragover {
+            border-color: var(--accent-blue);
+            background: rgba(99, 102, 241, 0.05);
+        }
+
+        .upload-zone .upload-icon {
+            font-size: 3rem;
+            margin-bottom: 12px;
+        }
+
+        .upload-zone p {
+            color: var(--text-secondary);
+            font-size: 1rem;
+        }
+
+        .upload-zone .supported {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 8px;
+        }
+
+        .upload-zone input[type="file"] {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .preview-img {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: var(--radius-sm);
+            margin: 16px 0;
+            border: 1px solid var(--border);
+        }
+
+        .generated-img {
+            max-width: 100%;
+            border-radius: var(--radius-sm);
+            margin-top: 16px;
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            display: none;
+            width: 24px;
+            height: 24px;
+            border: 3px solid rgba(255,255,255,0.2);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .loading .spinner { display: inline-block; }
+        .loading .btn-text { display: none; }
+
+        /* Two Column Layout */
+        .two-col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 16px 24px;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            z-index: 1000;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.4s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .toast.success { border-left: 3px solid var(--accent-green); }
+        .toast.error { border-left: 3px solid #ef4444; }
+
+        /* Audio button */
+        .play-btn {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--accent-green);
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.85rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.3s;
+        }
+
+        .play-btn:hover {
+            background: rgba(52, 211, 153, 0.1);
+            border-color: var(--accent-green);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            h1 { font-size: 1.8rem; }
+            .tabs { flex-wrap: wrap; border-radius: 16px; }
+            .tab { padding: 10px 16px; font-size: 0.8rem; }
+            .two-col { grid-template-columns: 1fr; }
+            .card { padding: 20px; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        /* Scroll styling */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-primary); }
+        ::-webkit-scrollbar-thumb { background: rgba(99, 102, 241, 0.3); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(99, 102, 241, 0.5); }
+
+        /* Sound wave animation */
+        .sound-wave {
+            display: inline-flex;
+            gap: 2px;
+            align-items: center;
+            height: 20px;
+        }
+
+        .sound-wave span {
+            width: 3px;
+            background: var(--accent-green);
+            border-radius: 2px;
+            animation: wave 1s ease-in-out infinite;
+        }
+
+        .sound-wave span:nth-child(1) { animation-delay: 0s; height: 6px; }
+        .sound-wave span:nth-child(2) { animation-delay: 0.1s; height: 12px; }
+        .sound-wave span:nth-child(3) { animation-delay: 0.2s; height: 8px; }
+        .sound-wave span:nth-child(4) { animation-delay: 0.3s; height: 16px; }
+        .sound-wave span:nth-child(5) { animation-delay: 0.4s; height: 10px; }
+
+        @keyframes wave {
+            0%, 100% { transform: scaleY(1); }
+            50% { transform: scaleY(0.3); }
+        }
+
+        .hidden { display: none !important; }
+
+        /* Dot-dash visual */
+        .dot-visual {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--accent-cyan);
+            margin: 0 2px;
+            vertical-align: middle;
+        }
+
+        .dash-visual {
+            display: inline-block;
+            width: 30px;
+            height: 10px;
+            border-radius: 5px;
+            background: var(--accent-orange);
+            margin: 0 2px;
+            vertical-align: middle;
+        }
+
+        .visual-morse {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            align-items: center;
+            padding: 16px;
+            background: rgba(15, 23, 42, 0.6);
+            border-radius: var(--radius-sm);
+            margin-top: 12px;
+            min-height: 50px;
+        }
+
+        .visual-char-gap {
+            width: 16px;
+        }
+
+        .visual-word-gap {
+            width: 36px;
+            height: 10px;
+            border-left: 2px solid var(--text-muted);
+            margin: 0 4px;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Header -->
+<header>
+    <div class="logo-row">
+        <div class="logo-icon">⚡</div>
+        <h1>Morse Analyzer</h1>
+    </div>
+    <p class="subtitle">Translate, analyze, visualize, and decode Morse code from images</p>
+    <p class="morse-demo">-- --- .-. ... . / -.-. --- -.. .</p>
+</header>
+
+<!-- Tabs -->
+<nav class="tabs" role="tablist">
+    <button class="tab active" data-tab="translator" role="tab" id="tab-translator">
+        <span class="tab-icon">🔤</span>Translator
+    </button>
+    <button class="tab" data-tab="analyzer" role="tab" id="tab-analyzer">
+        <span class="tab-icon">📊</span>Analyzer
+    </button>
+    <button class="tab" data-tab="image" role="tab" id="tab-image">
+        <span class="tab-icon">🖼️</span>Image
+    </button>
+    <button class="tab" data-tab="reference" role="tab" id="tab-reference">
+        <span class="tab-icon">📖</span>Reference
+    </button>
+</nav>
+
+<div class="container">
+
+    <!-- ==================== TRANSLATOR PANEL ==================== -->
+    <div class="panel active" id="panel-translator">
+        <div class="two-col">
+            <!-- Encode -->
+            <div class="card" id="encode-card">
+                <div class="card-title">
+                    <span class="icon icon-blue">✏️</span> Text → Morse
+                </div>
+                <div class="form-group">
+                    <label for="encode-input">Enter text to encode</label>
+                    <textarea id="encode-input" rows="4" placeholder="Type your message here... e.g., HELLO WORLD"></textarea>
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-primary" id="encode-btn" onclick="encodeText()">
+                        <span class="btn-text">Encode</span>
+                        <div class="spinner"></div>
+                    </button>
+                    <button class="btn btn-secondary" onclick="clearField('encode-input', 'encode-result')">Clear</button>
+                    <button class="play-btn" id="play-encode-btn" onclick="playMorse('encode')" title="Play as sound">
+                        🔊 Play
+                    </button>
+                </div>
+                <div style="margin-top: 20px;">
+                    <div class="result-box" id="encode-result">
+                        <span class="result-label">Morse Output</span>
+                        <span style="color: var(--text-muted)">Your encoded Morse code will appear here...</span>
+                    </div>
+                    <div class="visual-morse" id="encode-visual"></div>
+                </div>
+                <div style="margin-top: 12px;">
+                    <button class="btn btn-secondary" id="gen-img-btn" onclick="generateImage()" style="display:none;">
+                        🖼️ Generate Image
+                    </button>
+                    <img id="generated-morse-img" class="generated-img hidden" alt="Generated Morse Code">
+                </div>
+            </div>
+
+            <!-- Decode -->
+            <div class="card" id="decode-card">
+                <div class="card-title">
+                    <span class="icon icon-cyan">🔓</span> Morse → Text
+                </div>
+                <div class="form-group">
+                    <label for="decode-input">Enter Morse code (use . and -, space between chars, / between words)</label>
+                    <textarea id="decode-input" rows="4" placeholder=".- -... -.-. / -.. . ..-."></textarea>
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-primary" id="decode-btn" onclick="decodeMorse()">
+                        <span class="btn-text">Decode</span>
+                        <div class="spinner"></div>
+                    </button>
+                    <button class="btn btn-secondary" onclick="clearField('decode-input', 'decode-result')">Clear</button>
+                    <button class="play-btn" id="play-decode-btn" onclick="playMorse('decode')" title="Play as sound">
+                        🔊 Play
+                    </button>
+                </div>
+                <div style="margin-top: 20px;">
+                    <div class="result-box" id="decode-result">
+                        <span class="result-label">Decoded Text</span>
+                        <span style="color: var(--text-muted)">Your decoded text will appear here...</span>
+                    </div>
+                    <div class="visual-morse" id="decode-visual"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== ANALYZER PANEL ==================== -->
+    <div class="panel" id="panel-analyzer">
+        <div class="card">
+            <div class="card-title">
+                <span class="icon icon-orange">📊</span> Morse Code Analyzer
+            </div>
+            <div class="form-group">
+                <label for="analyze-input">Enter text or Morse code to analyze</label>
+                <textarea id="analyze-input" rows="3" placeholder="Enter plain text (will be converted) or Morse code directly..."></textarea>
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-primary" id="analyze-btn" onclick="analyzeMorse()">
+                    <span class="btn-text">Analyze</span>
+                    <div class="spinner"></div>
+                </button>
+                <button class="btn btn-secondary" onclick="document.getElementById('analyze-input').value=''">Clear</button>
+            </div>
+        </div>
+
+        <div id="analysis-results" class="hidden">
+            <!-- Decoded text -->
+            <div class="card">
+                <div class="card-title"><span class="icon icon-green">💬</span> Decoded Message</div>
+                <div class="result-box" id="analysis-decoded" style="font-size: 1.3rem; letter-spacing: 1px;"></div>
+            </div>
+
+            <!-- Stats -->
+            <div class="stats-grid" id="stats-grid"></div>
+
+            <!-- Frequency Chart -->
+            <div class="card" style="margin-top: 24px;">
+                <div class="card-title"><span class="icon icon-pink">📈</span> Character Frequency</div>
+                <div class="freq-chart" id="freq-chart"></div>
+            </div>
+
+            <!-- Morse Length Chart -->
+            <div class="card">
+                <div class="card-title"><span class="icon icon-cyan">📏</span> Morse Code Length per Character</div>
+                <div class="freq-chart" id="length-chart"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== IMAGE PANEL ==================== -->
+    <div class="panel" id="panel-image">
+        <div class="two-col">
+            <div class="card">
+                <div class="card-title">
+                    <span class="icon icon-pink">📤</span> Upload Image
+                </div>
+                <p style="color: var(--text-secondary); margin-bottom: 16px; font-size: 0.9rem;">
+                    Upload an image containing Morse code patterns (dark dots/dashes on light background).
+                    The processor will scan for horizontal segments and classify them as dots or dashes.
+                </p>
+                <div class="upload-zone" id="upload-zone">
+                    <div class="upload-icon">🖼️</div>
+                    <p>Drop an image here or click to browse</p>
+                    <p class="supported">PNG, JPG, BMP, GIF — Max 16MB</p>
+                    <input type="file" id="image-upload" accept="image/*" onchange="handleImageUpload(event)">
+                </div>
+                <img id="image-preview" class="preview-img hidden" alt="Preview">
+                <div class="btn-group" style="margin-top: 16px;">
+                    <button class="btn btn-primary" id="process-img-btn" onclick="processImage()" style="display:none;">
+                        <span class="btn-text">🔍 Process Image</span>
+                        <div class="spinner"></div>
+                    </button>
+                </div>
+            </div>
+
+            <div class="card" id="image-result-card" style="display:none;">
+                <div class="card-title">
+                    <span class="icon icon-green">✅</span> Extraction Results
+                </div>
+                <div id="image-results"></div>
+            </div>
+        </div>
+
+        <!-- How it works -->
+        <div class="card" style="margin-top: 24px;">
+            <div class="card-title"><span class="icon icon-blue">💡</span> How Image Processing Works</div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
+                <div class="stat-card">
+                    <div style="font-size: 2rem; margin-bottom: 8px;">1️⃣</div>
+                    <div style="font-weight: 600; margin-bottom: 4px;">Grayscale</div>
+                    <div style="font-size: 0.8rem; color: var(--text-muted);">Image is converted to grayscale</div>
+                </div>
+                <div class="stat-card">
+                    <div style="font-size: 2rem; margin-bottom: 8px;">2️⃣</div>
+                    <div style="font-weight: 600; margin-bottom: 4px;">Threshold</div>
+                    <div style="font-size: 0.8rem; color: var(--text-muted);">Binary threshold separates dark/light</div>
+                </div>
+                <div class="stat-card">
+                    <div style="font-size: 2rem; margin-bottom: 8px;">3️⃣</div>
+                    <div style="font-weight: 600; margin-bottom: 4px;">Scan</div>
+                    <div style="font-size: 0.8rem; color: var(--text-muted);">Horizontal segments are detected</div>
+                </div>
+                <div class="stat-card">
+                    <div style="font-size: 2rem; margin-bottom: 8px;">4️⃣</div>
+                    <div style="font-weight: 600; margin-bottom: 4px;">Classify</div>
+                    <div style="font-size: 0.8rem; color: var(--text-muted);">Segments classified as dots or dashes</div>
+                </div>
+                <div class="stat-card">
+                    <div style="font-size: 2rem; margin-bottom: 8px;">5️⃣</div>
+                    <div style="font-weight: 600; margin-bottom: 4px;">Decode</div>
+                    <div style="font-size: 0.8rem; color: var(--text-muted);">Morse code is decoded to text</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== REFERENCE PANEL ==================== -->
+    <div class="panel" id="panel-reference">
+        <div class="card">
+            <div class="card-title">
+                <span class="icon icon-green">📖</span> Complete Morse Code Reference
+            </div>
+            <div class="form-group">
+                <input type="text" id="table-search" placeholder="🔍  Search character or Morse code..." oninput="filterTable()">
+            </div>
+            <div class="table-wrapper">
+                <table class="ref-table" id="ref-table">
+                    <thead>
+                        <tr>
+                            <th>Character</th>
+                            <th>Morse Code</th>
+                            <th>Visual</th>
+                            <th>Length</th>
+                            <th>Dots</th>
+                            <th>Dashes</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ref-table-body"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+    // ========== TAB NAVIGATION ==========
+    document.querySelectorAll('.tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+            tab.classList.add('active');
+            document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
+        });
+    });
+
+    // ========== TOAST ==========
+    function showToast(msg, type = 'success') {
+        const toast = document.getElementById('toast');
+        toast.textContent = (type === 'success' ? '✅ ' : '❌ ') + msg;
+        toast.className = 'toast ' + type + ' show';
+        setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+
+    // ========== CLEAR ==========
+    function clearField(inputId, resultId) {
+        document.getElementById(inputId).value = '';
+        const res = document.getElementById(resultId);
+        res.innerHTML = `<span class="result-label">${resultId.includes('encode') ? 'Morse Output' : 'Decoded Text'}</span><span style="color: var(--text-muted)">Cleared.</span>`;
+        const visual = document.getElementById(inputId.replace('input', 'visual').replace('encode-', 'encode-').replace('decode-', 'decode-'));
+        if (inputId === 'encode-input') {
+            document.getElementById('encode-visual').innerHTML = '';
+            document.getElementById('gen-img-btn').style.display = 'none';
+            document.getElementById('generated-morse-img').classList.add('hidden');
+        } else {
+            document.getElementById('decode-visual').innerHTML = '';
+        }
+    }
+
+    // ========== ENCODE ==========
+    let lastEncodedMorse = '';
+    let lastDecodedMorse = '';
+
+    async function encodeText() {
+        const text = document.getElementById('encode-input').value.trim();
+        if (!text) return showToast('Please enter some text', 'error');
+
+        const btn = document.getElementById('encode-btn');
+        btn.classList.add('loading');
+
+        try {
+            const res = await fetch('/api/encode', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text })
+            });
+            const data = await res.json();
+            if (data.error) throw new Error(data.error);
+
+            lastEncodedMorse = data.morse;
+            const resultBox = document.getElementById('encode-result');
+            resultBox.innerHTML = `<span class="result-label">Morse Output</span>${formatMorse(data.morse)}`;
+
+            // Visual
+            document.getElementById('encode-visual').innerHTML = buildVisual(data.morse);
+            document.getElementById('gen-img-btn').style.display = 'inline-flex';
+
+            showToast('Encoded successfully!');
+        } catch (e) {
+            showToast(e.message, 'error');
+        }
+        btn.classList.remove('loading');
+    }
+
+    // ========== DECODE ==========
+    async function decodeMorse() {
+        const morse = document.getElementById('decode-input').value.trim();
+        if (!morse) return showToast('Please enter Morse code', 'error');
+
+        const btn = document.getElementById('decode-btn');
+        btn.classList.add('loading');
+
+        try {
+            const res = await fetch('/api/decode', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ morse })
+            });
+            const data = await res.json();
+            if (data.error) throw new Error(data.error);
+
+            lastDecodedMorse = morse;
+            document.getElementById('decode-result').innerHTML =
+                `<span class="result-label">Decoded Text</span><span style="font-size:1.2rem; letter-spacing:2px; color: var(--accent-green);">${escapeHtml(data.text)}</span>`;
+
+            document.getElementById('decode-visual').innerHTML = buildVisual(morse);
+
+            showToast('Decoded successfully!');
+        } catch (e) {
+            showToast(e.message, 'error');
+        }
+        btn.classList.remove('loading');
+    }
+
+    // ========== FORMAT MORSE ==========
+    function formatMorse(morse) {
+        return morse.split('').map(c => {
+            if (c === '.') return `<span class="morse-dot">•</span>`;
+            if (c === '-') return `<span class="morse-dash">━</span>`;
+            if (c === '/') return `<span class="morse-space">/</span>`;
+            if (c === ' ') return `<span style="margin:0 4px;"></span>`;
+            return c;
+        }).join('');
+    }
+
+    function buildVisual(morse) {
+        let html = '';
+        const parts = morse.split('');
+        for (const c of parts) {
+            if (c === '.') html += '<span class="dot-visual"></span>';
+            else if (c === '-') html += '<span class="dash-visual"></span>';
+            else if (c === '/') html += '<span class="visual-word-gap"></span>';
+            else if (c === ' ') html += '<span class="visual-char-gap"></span>';
+        }
+        return html;
+    }
+
+    // ========== PLAY MORSE AUDIO ==========
+    function playMorse(type) {
+        const morse = type === 'encode' ? lastEncodedMorse : lastDecodedMorse;
+        if (!morse) return showToast('Nothing to play', 'error');
+
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const freq = 600;
+        const dotLen = 0.08;
+        const dashLen = 0.24;
+        const gap = 0.08;
+        const charGap = 0.24;
+        const wordGap = 0.56;
+
+        let t = ctx.currentTime + 0.1;
+
+        for (const c of morse) {
+            if (c === '.') {
+                playTone(ctx, freq, t, dotLen);
+                t += dotLen + gap;
+            } else if (c === '-') {
+                playTone(ctx, freq, t, dashLen);
+                t += dashLen + gap;
+            } else if (c === ' ') {
+                t += charGap;
+            } else if (c === '/') {
+                t += wordGap;
+            }
+        }
+        showToast('Playing Morse audio...');
+    }
+
+    function playTone(ctx, freq, start, dur) {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.frequency.value = freq;
+        osc.type = 'sine';
+        gain.gain.setValueAtTime(0.3, start);
+        gain.gain.exponentialRampToValueAtTime(0.001, start + dur);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(start);
+        osc.stop(start + dur + 0.01);
+    }
+
+    // ========== ANALYZER ==========
+    async function analyzeMorse() {
+        let input = document.getElementById('analyze-input').value.trim();
+        if (!input) return showToast('Please enter text or Morse code', 'error');
+
+        const btn = document.getElementById('analyze-btn');
+        btn.classList.add('loading');
+
+        try {
+            // Detect if input is text or morse
+            const isMorse = /^[\.\-\s\/]+$/.test(input);
+            let morse = input;
+
+            if (!isMorse) {
+                const encRes = await fetch('/api/encode', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: input })
+                });
+                const encData = await encRes.json();
+                morse = encData.morse;
+            }
+
+            const res = await fetch('/api/analyze', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ morse })
+            });
+            const data = await res.json();
+            if (data.error) throw new Error(data.error);
+
+            // Show results
+            document.getElementById('analysis-results').classList.remove('hidden');
+            document.getElementById('analysis-decoded').innerHTML =
+                `<span class="result-label">Decoded</span>${escapeHtml(data.decoded_text)}`;
+
+            // Stats grid
+            const statsHtml = [
+                { value: data.total_dots, label: 'Total Dots', color: 'var(--accent-cyan)' },
+                { value: data.total_dashes, label: 'Total Dashes', color: 'var(--accent-orange)' },
+                { value: data.dot_dash_ratio, label: 'Dot/Dash Ratio', color: 'var(--accent-purple)' },
+                { value: data.total_characters, label: 'Characters', color: 'var(--accent-green)' },
+                { value: data.total_words, label: 'Words', color: 'var(--accent-pink)' },
+                { value: data.unique_characters, label: 'Unique Chars', color: 'var(--accent-blue)' },
+                { value: data.average_code_length, label: 'Avg Code Length', color: 'var(--accent-cyan)' },
+                { value: data.total_symbols, label: 'Total Symbols', color: 'var(--accent-orange)' },
+            ].map(s => `
+                <div class="stat-card">
+                    <div class="stat-value" style="background: linear-gradient(135deg, ${s.color}, var(--accent-blue)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">${s.value}</div>
+                    <div class="stat-label">${s.label}</div>
+                </div>
+            `).join('');
+            document.getElementById('stats-grid').innerHTML = statsHtml;
+
+            // Frequency chart
+            const freq = data.character_frequency;
+            const maxFreq = Math.max(...Object.values(freq), 1);
+            let freqHtml = '';
+            for (const [char, count] of Object.entries(freq).sort((a, b) => b[1] - a[1])) {
+                const h = (count / maxFreq) * 120;
+                freqHtml += `
+                    <div class="freq-bar-wrapper">
+                        <div class="freq-count">${count}</div>
+                        <div class="freq-bar" style="height: ${h}px;"></div>
+                        <div class="freq-label">${char}</div>
+                    </div>
+                `;
+            }
+            document.getElementById('freq-chart').innerHTML = freqHtml;
+
+            // Length chart
+            const lens = data.morse_lengths;
+            const maxLen = Math.max(...Object.values(lens), 1);
+            let lenHtml = '';
+            for (const [char, len] of Object.entries(lens).sort((a, b) => b[1] - a[1])) {
+                const h = (len / maxLen) * 120;
+                lenHtml += `
+                    <div class="freq-bar-wrapper">
+                        <div class="freq-count">${len}</div>
+                        <div class="freq-bar" style="height: ${h}px; background: var(--gradient-3);"></div>
+                        <div class="freq-label">${char}</div>
+                    </div>
+                `;
+            }
+            document.getElementById('length-chart').innerHTML = lenHtml;
+
+            showToast('Analysis complete!');
+        } catch (e) {
+            showToast(e.message, 'error');
+        }
+        btn.classList.remove('loading');
+    }
+
+    // ========== IMAGE PROCESSING ==========
+    let selectedFile = null;
+
+    function handleImageUpload(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        selectedFile = file;
+
+        const reader = new FileReader();
+        reader.onload = function (ev) {
+            const preview = document.getElementById('image-preview');
+            preview.src = ev.target.result;
+            preview.classList.remove('hidden');
+            document.getElementById('process-img-btn').style.display = 'inline-flex';
+        };
+        reader.readAsDataURL(file);
+    }
+
+    // Drag and drop
+    const uploadZone = document.getElementById('upload-zone');
+    uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+    uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+    uploadZone.addEventListener('drop', e => {
+        e.preventDefault();
+        uploadZone.classList.remove('dragover');
+        const file = e.dataTransfer.files[0];
+        if (file && file.type.startsWith('image/')) {
+            selectedFile = file;
+            const reader = new FileReader();
+            reader.onload = ev => {
+                document.getElementById('image-preview').src = ev.target.result;
+                document.getElementById('image-preview').classList.remove('hidden');
+                document.getElementById('process-img-btn').style.display = 'inline-flex';
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    async function processImage() {
+        if (!selectedFile) return showToast('Please select an image', 'error');
+
+        const btn = document.getElementById('process-img-btn');
+        btn.classList.add('loading');
+
+        try {
+            const formData = new FormData();
+            formData.append('image', selectedFile);
+
+            const res = await fetch('/api/process-image', { method: 'POST', body: formData });
+            const data = await res.json();
+
+            const resultCard = document.getElementById('image-result-card');
+            resultCard.style.display = 'block';
+
+            let html = '';
+            if (data.success) {
+                html = `
+                    <div style="margin-bottom: 16px;">
+                        <span style="color: var(--accent-green); font-weight: 600;">✅ ${data.message}</span>
+                    </div>
+                    <div class="result-box" style="margin-bottom: 16px;">
+                        <span class="result-label">Extracted Morse</span>
+                        ${formatMorse(data.morse)}
+                    </div>
+                    <div class="visual-morse">${buildVisual(data.morse)}</div>
+                    <div class="result-box" style="margin-top: 16px;">
+                        <span class="result-label">Decoded Text</span>
+                        <span style="font-size: 1.3rem; color: var(--accent-green); letter-spacing: 2px;">${escapeHtml(data.decoded)}</span>
+                    </div>
+                    <div class="stats-grid" style="margin-top: 16px;">
+                        <div class="stat-card">
+                            <div class="stat-value">${data.image_info.total_segments}</div>
+                            <div class="stat-label">Segments</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${data.image_info.dots}</div>
+                            <div class="stat-label">Dots</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${data.image_info.dashes}</div>
+                            <div class="stat-label">Dashes</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${data.image_info.width}×${data.image_info.height}</div>
+                            <div class="stat-label">Image Size</div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                html = `<div style="color: #ef4444; font-weight: 600;">⚠️ ${data.message}</div>
+                        <div class="stats-grid" style="margin-top: 16px;">
+                            <div class="stat-card">
+                                <div class="stat-value">${data.image_info.width}×${data.image_info.height}</div>
+                                <div class="stat-label">Image Size</div>
+                            </div>
+                        </div>`;
+            }
+            document.getElementById('image-results').innerHTML = html;
+            showToast(data.success ? 'Image processed!' : 'Processing issue', data.success ? 'success' : 'error');
+        } catch (e) {
+            showToast(e.message, 'error');
+        }
+        btn.classList.remove('loading');
+    }
+
+    // ========== GENERATE IMAGE ==========
+    async function generateImage() {
+        if (!lastEncodedMorse) return showToast('Encode text first', 'error');
+
+        try {
+            const res = await fetch('/api/generate-image', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ morse: lastEncodedMorse })
+            });
+            const data = await res.json();
+            const img = document.getElementById('generated-morse-img');
+            img.src = data.image;
+            img.classList.remove('hidden');
+            showToast('Image generated!');
+        } catch (e) {
+            showToast(e.message, 'error');
+        }
+    }
+
+    // ========== REFERENCE TABLE ==========
+    async function loadTable() {
+        try {
+            const res = await fetch('/api/table');
+            const data = await res.json();
+            const tbody = document.getElementById('ref-table-body');
+            tbody.innerHTML = data.map(row => `
+                <tr>
+                    <td class="char-cell">${escapeHtml(row.character)}</td>
+                    <td class="morse-cell">${formatMorse(row.morse)}</td>
+                    <td>${buildVisual(row.morse)}</td>
+                    <td>${row.length}</td>
+                    <td style="color: var(--accent-cyan)">${row.dots}</td>
+                    <td style="color: var(--accent-orange)">${row.dashes}</td>
+                </tr>
+            `).join('');
+        } catch (e) {
+            console.error('Failed to load table:', e);
+        }
+    }
+
+    function filterTable() {
+        const query = document.getElementById('table-search').value.toLowerCase();
+        const rows = document.querySelectorAll('#ref-table-body tr');
+        rows.forEach(row => {
+            const text = row.textContent.toLowerCase();
+            row.style.display = text.includes(query) ? '' : 'none';
+        });
+    }
+
+    // ========== UTILITY ==========
+    function escapeHtml(str) {
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+
+    // Load table on start
+    loadTable();
+</script>
+
+</body>
+</html>
